@@ -505,6 +505,7 @@ main(int argc, char *argv[])
 			Blake3_InitKeyed(&ctx, (const uint8_t *)salt);
 			Blake3_Update(&ctx, buffer, cur->input_len);
 			Blake3_FinalSeek(&ctx, 0, digest, TEST_DIGEST_LEN);
+
 			fmt_hexdump(result, (char *)digest, 131);
 			if (bcmp(result, cur->shash, 131) != 0)
 				failed = B_TRUE;

@@ -85,7 +85,7 @@ extern const blake3_impl_ops_t blake3_avx2_impl;
 extern const blake3_impl_ops_t blake3_avx512_impl;
 #endif
 
-#if defined(__x86_64) && defined(HAVE_LARGE_STACKS)
+#if defined(__x86_64)
 #define	MAX_SIMD_DEGREE 16
 #else
 #define	MAX_SIMD_DEGREE 4
