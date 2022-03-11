@@ -49,6 +49,7 @@ static void compress_pre(uint32_t state[16], const uint32_t cv[8],
     uint64_t counter, uint8_t flags)
 {
 	uint32_t block_words[16];
+
 	block_words[0] = load32(block + 4 * 0);
 	block_words[1] = load32(block + 4 * 1);
 	block_words[2] = load32(block + 4 * 2);
@@ -97,6 +98,7 @@ void blake3_compress_in_place_generic(uint32_t cv[8],
     uint64_t counter, uint8_t flags)
 {
 	uint32_t state[16];
+
 	compress_pre(state, cv, block, block_len, counter, flags);
 	cv[0] = state[0] ^ state[8];
 	cv[1] = state[1] ^ state[9];
@@ -115,6 +117,7 @@ static void hash_one_generic(const uint8_t *input, size_t blocks,
 	uint32_t cv[8];
 	memcpy(cv, key, BLAKE3_KEY_LEN);
 	uint8_t block_flags = flags | flags_start;
+
 	while (blocks > 0) {
 		if (blocks == 1) {
 			block_flags |= flags_end;

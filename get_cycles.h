@@ -26,7 +26,7 @@ typedef unsigned long long cycles_t;
 static inline cycles_t get_cycles(void)
 {
 	cycles_t tick;
-	asm volatile ("rdtsc":"=A" (tick));
+	__asm__ volatile ("rdtsc":"=A" (tick));
 	return tick;
 }
 #elif defined(__x86_64__)
@@ -34,7 +34,7 @@ typedef unsigned long long cycles_t;
 static inline cycles_t get_cycles(void)
 {
 	unsigned int tickl, tickh;
-	asm volatile ("rdtsc":"=a" (tickl), "=d"(tickh));
+	__asm__ volatile ("rdtsc":"=a" (tickl), "=d"(tickh));
 	return ((cycles_t) tickh << 32) | tickl;
 }
 #elif defined(__s390__)
@@ -42,7 +42,7 @@ typedef unsigned long long cycles_t;
 static inline cycles_t get_cycles(void)
 {
 	cycles_t tick;
-	asm volatile ("stck %0":"=Q" (tick)::"cc");
+	__asm__ volatile ("stck %0":"=Q" (tick)::"cc");
 	return tick >> 2;
 }
 #elif defined(__alpha__)
@@ -50,7 +50,7 @@ typedef unsigned int cycles_t;
 static inline cycles_t get_cycles(void)
 {
 	unsigned int tick;
-	asm volatile ("rpcc %0":"=r" (tick));
+	__asm__ volatile ("rpcc %0":"=r" (tick));
 	return tick;
 }
 #elif defined(__sparc__)
@@ -58,25 +58,21 @@ typedef long long cycles_t;
 static inline cycles_t get_cycles(void)
 {
 	long long tick;
-	asm volatile ("rd %%tick,%0":"=r" (tick));
+	__asm__ volatile ("rd %%tick,%0":"=r" (tick));
 	return tick;
 }
 #elif defined(__powerpc__)
-/* https://www.nxp.com/docs/en/reference-manual/E600CORERM.pdf - xxx test */
-typedef unsigned int cycles_t;
+typedef unsigned long long cycles_t;
 static inline cycles_t get_cycles(void)
 {
-	long long tick;
-	asm volatile ("li %0,64;mtspr MMCR0,%0;mfspr %0,PMC1","=r"(tick));
-	return tick;
-}
-#elif defined(__powerpc64__)
-typedef unsigned int cycles_t;
-static inline cycles_t get_cycles(void)
-{
-	long long tick;
-	asm volatile ("li %0,64;mtspr MMCR0,%0;mfspr %0,PMC1","=r"(tick));
-	return tick;
+        unsigned int tbl, tbu0, tbu1;
+        do {
+                __asm__ __volatile__ ("mftbu %0" : "=r"(tbu0));
+                __asm__ __volatile__ ("mftb %0" : "=r"(tbl));
+                __asm__ __volatile__ ("mftbu %0" : "=r"(tbu1));
+        } while (tbu0 != tbu1);
+
+        return (((unsigned long long)tbu0) << 32) | tbl;
 }
 #elif defined(_MSC_VER)
 #include <intrin.h>

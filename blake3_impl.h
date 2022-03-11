@@ -16,8 +16,44 @@ extern "C" {
 #endif
 
 #include <sys/types.h>
+#include <string.h>
+#include <errno.h>
 
 #include "blake3.h"
+
+typedef enum {
+	B_FALSE = 0,
+	B_TRUE = 1
+} boolean_t;
+
+#define	ARRAY_SIZE(a) (sizeof (a) / sizeof (a[0]))
+
+#if defined(__x86_64)
+static inline boolean_t
+zfs_sse2_available(void) {
+	return (__builtin_cpu_supports("sse2"));
+}
+
+static inline boolean_t
+zfs_sse4_1_available(void) {
+	return (__builtin_cpu_supports("sse4.1"));
+}
+
+static inline boolean_t
+zfs_avx2_available(void) {
+	return (__builtin_cpu_supports("avx2"));
+}
+
+static inline boolean_t
+zfs_avx512f_available(void) {
+	return (__builtin_cpu_supports("avx512f"));
+}
+
+static inline boolean_t
+zfs_avx512vl_available(void) {
+	return (__builtin_cpu_supports("avx512vl"));
+}
+#endif
 
 /*
  * Methods used to define BLAKE3 assembler implementations
@@ -69,23 +105,14 @@ extern const blake3_impl_ops_t blake3_sse2_impl;
 extern const blake3_impl_ops_t blake3_sse41_impl;
 #endif
 
-#if defined(__x86_64) && defined(HAVE_SSE2)
+#if defined(__x86_64)
 extern const blake3_impl_ops_t blake3_sse2_impl;
-#endif
-
-#if defined(__x86_64) && defined(HAVE_SSE4_1)
 extern const blake3_impl_ops_t blake3_sse41_impl;
-#endif
-
-#if defined(__x86_64) && defined(HAVE_SSE4_1) && defined(HAVE_AVX2)
 extern const blake3_impl_ops_t blake3_avx2_impl;
-#endif
-
-#if defined(__x86_64) && defined(HAVE_AVX512F) && defined(HAVE_AVX512VL)
 extern const blake3_impl_ops_t blake3_avx512_impl;
 #endif
 
-#if defined(__x86_64) && defined(HAVE_LARGE_STACKS)
+#if defined(__x86_64)
 #define	MAX_SIMD_DEGREE 16
 #else
 #define	MAX_SIMD_DEGREE 4

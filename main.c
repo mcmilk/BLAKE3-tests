@@ -6,6 +6,7 @@
  */
 
 #include <assert.h>
+#include <alloca.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -62,6 +63,11 @@ int main(int argc, char **argv) {
   uint8_t *key = alloca(BLAKE3_KEY_LEN);
   uint8_t mode = HASH_MODE;
   uint8_t *buf, *B = alloca(BUFSIZE);
+
+  //blake3_set_impl_name("generic");
+  blake3_set_impl_name("sse2");
+  //blake3_set_impl_name("sse41");
+  printf("GET current: %s\n", blake3_get_impl_name());
 
   while (argc > 1) {
     if (argc <= 2) {
@@ -122,7 +128,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < out_len; i++) {
       printf("%02x", buf[i]);
     }
-    if (argc > 1) printf(" cycles=%llu\n", stop - start);
+    printf(" cycles=%llu\n", stop - start);
   }
   printf("  -\n");
 
