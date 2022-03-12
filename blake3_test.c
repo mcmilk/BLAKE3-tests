@@ -12,6 +12,7 @@
 #include <sys/time.h>
 
 #include "blake3.h"
+#include "get_cycles.h"
 
 /*
  * set it to a define for debugging
@@ -465,11 +466,10 @@ main(int argc, char *argv[])
 {
 	boolean_t failed = B_FALSE;
 	uint8_t buffer[102400];
-	uint64_t cpu_mhz = 0;
 	int id, i, j;
 
-	if (argc == 2)
-		cpu_mhz = atoi(argv[1]);
+	(void)argv;
+	(void)argc;
 
 	/* fill test message */
 	for (i = 0, j = 0; i < (int)sizeof (buffer); i++, j++) {
@@ -532,25 +532,17 @@ main(int argc, char *argv[])
 		BLAKE3_CTX	ctx;					\
 		uint8_t		digest[diglen / 8];			\
 		uint8_t		block[131072];				\
-		uint64_t	delta;					\
-		double		cpb = 0;				\
 		int		i;					\
-		struct timeval	start, end;				\
+		cycles_t start, stop;					\
 		bzero(block, sizeof (block));				\
-		(void) gettimeofday(&start, NULL);			\
+		start = get_cycles();					\
 		Blake3_Init(&ctx);					\
 		for (i = 0; i < 8192; i++)				\
 			Blake3_Update(&ctx, block, sizeof (block));	\
 		Blake3_Final(&ctx, digest);				\
-		(void) gettimeofday(&end, NULL);			\
-		delta = (end.tv_sec * 1000000llu + end.tv_usec) -	\
-		    (start.tv_sec * 1000000llu + start.tv_usec);	\
-		if (cpu_mhz != 0) {					\
-			cpb = (cpu_mhz * 1e6 * ((double)delta /		\
-			    1000000)) / (8192 * 128 * 1024);		\
-		}							\
-		(void) printf("BLAKE3-%s %llu us (%.02f CPB)\n", impl,	\
-		    (unsigned long long)delta, cpb);			\
+		stop = get_cycles();					\
+		(void) printf("BLAKE3-%s (%llu mio cycles)\n", impl,	\
+			(stop - start)/1000/1000);			\
 	} while (0)
 
 	printf("Running performance tests (hashing 1024 MiB of data):\n");

@@ -1,5 +1,5 @@
 
-CC	= clang
+CC	= gcc
 CFLAGS	= -I. -W -O3 -Wall -pipe
 
 OBJS	= blake3.o blake3_generic.o blake3_impl.o

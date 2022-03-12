@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < out_len; i++) {
       printf("%02x", buf[i]);
     }
-    if (argc > 1) printf(" cycles=%llu\n", stop - start);
+    printf(" cycles=%llu\n", stop - start);
   }
   printf("  -\n");
 
