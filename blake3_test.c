@@ -9,15 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
 #include <sys/time.h>
+#include <sys/random.h>
 
 #include "blake3.h"
 #include "get_cycles.h"
-
-/*
- * set it to a define for debugging
- */
-#undef	BLAKE3_DEBUG
 
 /*
  * C version of:
@@ -433,12 +430,6 @@ static blake3_test_t TestArray[] = {
 	}
 };
 
-#ifdef BLAKE3_DEBUG
-#define	dprintf printf
-#else
-#define	dprintf(...)
-#endif
-
 static char fmt_tohex(char c);
 static size_t fmt_hexdump(char *dest, const char *src, size_t len);
 
@@ -461,28 +452,39 @@ static size_t fmt_hexdump(char *dest, const char *src, size_t len) {
 	return (written);
 }
 
-int
-main(int argc, char *argv[])
+static uint32_t
+random_range(uint32_t range)
 {
-	boolean_t failed = B_FALSE;
+	uint8_t buf[4];
+	uint32_t r;
+
+	if (range == 0)
+		return (0);
+
+	getrandom(buf, sizeof(buf), 0);
+	r = 0;
+	r += (buf[0] & 0xff) << 0;
+	r += (buf[1] & 0xff) << 4;
+	r += (buf[2] & 0xff) << 8;
+	r += (buf[3] & 0xff) << 16;
+
+	return (r % range);
+}
+
+static void test_blake3_ref() {
 	uint8_t buffer[102400];
 	int id, i, j;
 
-	(void)argv;
-	(void)argc;
-
-	/* fill test message */
 	for (i = 0, j = 0; i < (int)sizeof (buffer); i++, j++) {
 		if (j == 251)
 			j = 0;
 		buffer[i] = (uint8_t)j;
 	}
 
-	(void) printf("Running algorithm correctness tests:\n");
+	printf("Running algorithm correctness tests: ");
 	for (id = 0; id < blake3_get_impl_count(); id++) {
 		blake3_set_impl_id(id);
 		const char *name = blake3_get_impl_name();
-		dprintf("Result for BLAKE3-%s:\n", name);
 		for (i = 0; TestArray[i].hash; i++) {
 			blake3_test_t *cur = &TestArray[i];
 
@@ -495,28 +497,97 @@ main(int argc, char *argv[])
 			Blake3_Update(&ctx, buffer, cur->input_len);
 			Blake3_FinalSeek(&ctx, 0, digest, TEST_DIGEST_LEN);
 			fmt_hexdump(result, (char *)digest, 131);
-			if (bcmp(result, cur->hash, 131) != 0)
-				failed = B_TRUE;
-
-			dprintf("HASH-res:  %s\n", result);
-			dprintf("HASH-ref:  %s\n", cur->hash);
+			if (bcmp(result, cur->hash, 131) != 0) {
+				printf("%5s: %s\n", "genric", cur->hash);
+				printf("%5s: %s\n", name, result);
+			}
 
 			/* salted hashing */
 			Blake3_InitKeyed(&ctx, (const uint8_t *)salt);
 			Blake3_Update(&ctx, buffer, cur->input_len);
 			Blake3_FinalSeek(&ctx, 0, digest, TEST_DIGEST_LEN);
-
 			fmt_hexdump(result, (char *)digest, 131);
-			if (bcmp(result, cur->shash, 131) != 0)
-				failed = B_TRUE;
+			if (bcmp(result, cur->shash, 131) != 0) {
+				printf("%5s: %s\n", "genric", cur->shash);
+				printf("%5s: %s\n", name, result);
+			}
+		}
+		printf("%s ", name);
+	}
+	printf("DONE!\n");
+}
 
-			dprintf("SHASH-res: %s\n", result);
-			dprintf("SHASH-ref: %s\n", cur->shash);
 
-			printf("BLAKE3-%s Message (inlen=%d)\tResult: %s\n",
-			    name, cur->input_len, failed?"FAILED!":"OK");
+#undef TEST_DIGEST_LEN
+#define TEST_DIGEST_LEN 64
+static void test_blake3_impl(int i) {
+	uint8_t buffer[1024*1024];
+	uint32_t testlen;
+	int id;
+
+	BLAKE3_CTX ctx;
+	uint8_t hash_ref[TEST_DIGEST_LEN], shash_ref[TEST_DIGEST_LEN];
+
+	testlen = random_range(1024*1024);
+	getrandom(buffer, sizeof(buffer), 0);
+
+	/* reference - default hashing */
+	Blake3_Init(&ctx);
+	Blake3_Update(&ctx, buffer, testlen);
+	Blake3_FinalSeek(&ctx, 0, hash_ref, TEST_DIGEST_LEN);
+
+	/* reference - salted hashing */
+	Blake3_InitKeyed(&ctx, (const uint8_t *)salt);
+	Blake3_Update(&ctx, buffer, testlen);
+	Blake3_FinalSeek(&ctx, 0, shash_ref, TEST_DIGEST_LEN);
+
+	printf("%d=%u ", i, testlen);
+	fflush(stdout);
+
+	/* check id 1..N (0 must be generic) */
+	for (id = 1; id < blake3_get_impl_count(); id++) {
+		uint8_t hash[TEST_DIGEST_LEN];
+		char res1[TEST_DIGEST_LEN];
+		char res2[TEST_DIGEST_LEN];
+		const char *name;
+
+		blake3_set_impl_id(id);
+		name = blake3_get_impl_name();
+
+		/* default hashing */
+		Blake3_Init(&ctx);
+		Blake3_Update(&ctx, buffer, testlen);
+		Blake3_FinalSeek(&ctx, 0, hash, TEST_DIGEST_LEN);
+		if (bcmp(hash_ref, hash, TEST_DIGEST_LEN/2) != 0) {
+			fmt_hexdump(res1, (char *)hash_ref, TEST_DIGEST_LEN/2);
+			fmt_hexdump(res2, (char *)hash, TEST_DIGEST_LEN/2);
+			res1[TEST_DIGEST_LEN/2] = 0;
+			res2[TEST_DIGEST_LEN/2] = 0;
+			printf("%8s: %s ", "genric", res1);
+			printf("!= %8s: %s\n", name, res2);
+		}
+
+		/* salted hashing */
+		Blake3_InitKeyed(&ctx, (const uint8_t *)salt);
+		Blake3_Update(&ctx, buffer, testlen);
+		Blake3_FinalSeek(&ctx, 0, hash, TEST_DIGEST_LEN);
+		if (bcmp(shash_ref, hash, TEST_DIGEST_LEN/2) != 0) {
+			fmt_hexdump(res1, (char *)shash_ref, TEST_DIGEST_LEN/2);
+			fmt_hexdump(res2, (char *)hash, TEST_DIGEST_LEN/2);
+			res1[TEST_DIGEST_LEN/2] = 0;
+			res2[TEST_DIGEST_LEN/2] = 0;
+			printf("%8s: %s ", "genric", res1);
+			printf("!= %8s: %s\n", name, res2);
 		}
 	}
+}
+
+int
+main(int argc, char *argv[])
+{
+	int i;
+	(void)argv;
+	(void)argc;
 
 	printf("HAVE_SSE2:     %d\n", zfs_sse2_available());
 	printf("HAVE_SSE41:    %d\n", zfs_sse4_1_available());
@@ -524,32 +595,10 @@ main(int argc, char *argv[])
 	printf("HAVE_AVX512f:  %d\n", zfs_avx512f_available());
 	printf("HAVE_AVX512VL: %d\n", zfs_avx512vl_available());
 
-	if (failed)
-		return (1);
+	test_blake3_ref();
 
-#define	BLAKE3_PERF_TEST(impl, diglen)					\
-	do {								\
-		BLAKE3_CTX	ctx;					\
-		uint8_t		digest[diglen / 8];			\
-		uint8_t		block[131072];				\
-		int		i;					\
-		cycles_t start, stop;					\
-		bzero(block, sizeof (block));				\
-		start = get_cycles();					\
-		Blake3_Init(&ctx);					\
-		for (i = 0; i < 8192; i++)				\
-			Blake3_Update(&ctx, block, sizeof (block));	\
-		Blake3_Final(&ctx, digest);				\
-		stop = get_cycles();					\
-		(void) printf("BLAKE3-%s (%llu mio cycles)\n", impl,	\
-			(stop - start)/1000/1000);			\
-	} while (0)
-
-	printf("Running performance tests (hashing 1024 MiB of data):\n");
-	for (id = 0; id < blake3_get_impl_count(); id++) {
-		blake3_set_impl_id(id);
-		const char *name = blake3_get_impl_name();
-		BLAKE3_PERF_TEST(name, 256);
+	for (i=0; i<4000; i++) {
+		test_blake3_impl(i);
 	}
 
 	return (0);

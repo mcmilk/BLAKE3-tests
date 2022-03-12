@@ -690,7 +690,7 @@ Blake3_Update2(BLAKE3_CTX *ctx, const void *input, size_t input_len)
 	}
 }
 
-#define	BLAKE3_MAX	1024 * 64
+#define	BLAKE3_MAX	1024 * 2164
 void
 Blake3_Update(BLAKE3_CTX *ctx, const void *input, size_t todo)
 {
