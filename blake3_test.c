@@ -519,7 +519,7 @@ static void test_blake3_ref() {
 
 
 #undef TEST_DIGEST_LEN
-#define TEST_DIGEST_LEN 64
+#define TEST_DIGEST_LEN 262
 static void test_blake3_impl(int i) {
 	uint8_t buffer[1024*1024];
 	uint32_t testlen;
@@ -597,7 +597,7 @@ main(int argc, char *argv[])
 
 	test_blake3_ref();
 
-	for (i=0; i<4000; i++) {
+	for (i=0; i<1000; i++) {
 		test_blake3_impl(i);
 	}
 
