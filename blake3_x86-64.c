@@ -7,6 +7,48 @@
 
 #include "blake3_impl.h"
 
+typedef enum {
+	B_FALSE = 0,
+	B_TRUE = 1
+} boolean_t;
+
+#define	ARRAY_SIZE(a) (sizeof (a) / sizeof (a[0]))
+
+#define kfpu_begin()
+#define kfpu_end()
+
+static inline boolean_t
+kfpu_allowed(void) {
+	return (1);
+}
+
+#if (defined(__x86_64)
+static inline boolean_t
+zfs_sse2_available(void) {
+	return (__builtin_cpu_supports("sse2"));
+}
+
+static inline boolean_t
+zfs_sse4_1_available(void) {
+	return (__builtin_cpu_supports("sse4.1"));
+}
+
+static inline boolean_t
+zfs_avx2_available(void) {
+	return (__builtin_cpu_supports("avx2"));
+}
+
+static inline boolean_t
+zfs_avx512f_available(void) {
+	return (__builtin_cpu_supports("avx512f"));
+}
+
+static inline boolean_t
+zfs_avx512vl_available(void) {
+	return (__builtin_cpu_supports("avx512vl"));
+}
+#endif
+
 #if (defined(__x86_64) && defined(HAVE_SSE2)) || \
 	defined(__powerpc__) || defined(__aarch64__)
 
