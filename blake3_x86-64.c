@@ -7,13 +7,6 @@
 
 #include "blake3_impl.h"
 
-typedef enum {
-	B_FALSE = 0,
-	B_TRUE = 1
-} boolean_t;
-
-#define	ARRAY_SIZE(a) (sizeof (a) / sizeof (a[0]))
-
 #define kfpu_begin()
 #define kfpu_end()
 
@@ -22,7 +15,7 @@ kfpu_allowed(void) {
 	return (1);
 }
 
-#if (defined(__x86_64)
+#if defined(__x86_64)
 static inline boolean_t
 zfs_sse2_available(void) {
 	return (__builtin_cpu_supports("sse2"));

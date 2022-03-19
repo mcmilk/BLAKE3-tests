@@ -16,8 +16,14 @@ extern "C" {
 #endif
 
 #include <sys/types.h>
-
 #include "blake3.h"
+
+typedef enum {
+	B_FALSE = 0,
+	B_TRUE = 1
+} boolean_t;
+
+#define	ARRAY_SIZE(a) (sizeof (a) / sizeof (a[0]))
 
 /*
  * Methods used to define BLAKE3 assembler implementations

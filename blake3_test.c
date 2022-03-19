@@ -589,12 +589,11 @@ main(int argc, char *argv[])
 	(void)argv;
 	(void)argc;
 
-	printf("HAVE_SSE2:     %d\n", zfs_sse2_available());
-	printf("HAVE_SSE41:    %d\n", zfs_sse4_1_available());
-	printf("HAVE_AVX2:     %d\n", zfs_avx2_available());
-	printf("HAVE_AVX512f:  %d\n", zfs_avx512f_available());
-	printf("HAVE_AVX512VL: %d\n", zfs_avx512vl_available());
-
+	//printf("HAVE_SSE2:     %d\n", zfs_sse2_available());
+	//printf("HAVE_SSE41:    %d\n", zfs_sse4_1_available());
+	//printf("HAVE_AVX2:     %d\n", zfs_avx2_available());
+	//printf("HAVE_AVX512f:  %d\n", zfs_avx512f_available());
+	//printf("HAVE_AVX512VL: %d\n", zfs_avx512vl_available());
 	test_blake3_ref();
 
 	for (i=0; i<1000; i++) {
