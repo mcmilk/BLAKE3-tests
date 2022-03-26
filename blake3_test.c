@@ -471,7 +471,7 @@ random_range(uint32_t range)
 	return (r % range);
 }
 
-static void test_blake3_ref() {
+void test_blake3_ref() {
 	uint8_t buffer[102400];
 	int id, i, j;
 
@@ -596,7 +596,7 @@ main(int argc, char *argv[])
 	//printf("HAVE_AVX512VL: %d\n", zfs_avx512vl_available());
 	test_blake3_ref();
 
-	for (i=0; i<1000; i++) {
+	for (i=0; i<100; i++) {
 		test_blake3_impl(i);
 	}
 
