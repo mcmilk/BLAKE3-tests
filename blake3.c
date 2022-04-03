@@ -13,13 +13,20 @@
 #include "blake3.h"
 #include "blake3_impl.h"
 
+#include <stdio.h>
+#if 1
+#define dprintf printf
+#else
+#define dprintf(...)
+#endif
+
 /*
  * We need 1056 byte stack for blake3_compress_subtree_wide()
  * - we define this pragma to make gcc happy
  */
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wframe-larger-than="
-#endif
+//#if defined(__GNUC__)
+//#pragma GCC diagnostic ignored "-Wframe-larger-than="
+//#endif
 
 /* internal used */
 typedef struct {
@@ -89,6 +96,7 @@ static void Blake3_Update2(BLAKE3_CTX *ctx, const void *input,
 static void chunk_state_init(blake3_chunk_state_t *ctx,
     const uint32_t key[8], uint8_t flags)
 {
+	dprintf("%s\n", __func__);
 	memcpy(ctx->cv, key, BLAKE3_KEY_LEN);
 	ctx->chunk_counter = 0;
 	memset(ctx->buf, 0, BLAKE3_BLOCK_LEN);
@@ -100,6 +108,7 @@ static void chunk_state_init(blake3_chunk_state_t *ctx,
 static void chunk_state_reset(blake3_chunk_state_t *ctx,
     const uint32_t key[8], uint64_t chunk_counter)
 {
+	dprintf("%s\n", __func__);
 	memcpy(ctx->cv, key, BLAKE3_KEY_LEN);
 	ctx->chunk_counter = chunk_counter;
 	ctx->blocks_compressed = 0;
@@ -139,6 +148,7 @@ static output_t make_output(const uint32_t input_cv[8],
     const uint8_t *block, uint8_t block_len,
     uint64_t counter, uint8_t flags)
 {
+	dprintf("%s\n", __func__);
 	output_t ret;
 	memcpy(ret.input_cv, input_cv, 32);
 	memcpy(ret.block, block, BLAKE3_BLOCK_LEN);
@@ -158,6 +168,7 @@ static output_t make_output(const uint32_t input_cv[8],
  */
 static void output_chaining_value(const output_t *ctx, uint8_t cv[32])
 {
+	dprintf("%s\n", __func__);
 	const blake3_impl_ops_t *ops = blake3_impl_get_ops();
 	uint32_t cv_words[8];
 	memcpy(cv_words, ctx->input_cv, 32);
@@ -169,6 +180,7 @@ static void output_chaining_value(const output_t *ctx, uint8_t cv[32])
 static void output_root_bytes(const output_t *ctx, uint64_t seek,
     uint8_t *out, size_t out_len)
 {
+	dprintf("%s\n", __func__);
 	const blake3_impl_ops_t *ops = blake3_impl_get_ops();
 	uint64_t output_block_counter = seek / 64;
 	size_t offset_within_block = seek % 64;
@@ -194,6 +206,7 @@ static void output_root_bytes(const output_t *ctx, uint64_t seek,
 static void chunk_state_update(blake3_chunk_state_t *ctx,
     const uint8_t *input, size_t input_len)
 {
+	dprintf("%s\n", __func__);
 	const blake3_impl_ops_t *ops = blake3_impl_get_ops();
 	if (ctx->buf_len > 0) {
 		size_t take = chunk_state_fill_buf(ctx, input, input_len);
@@ -225,6 +238,7 @@ static void chunk_state_update(blake3_chunk_state_t *ctx,
 
 static output_t chunk_state_output(const blake3_chunk_state_t *ctx)
 {
+	dprintf("%s\n", __func__);
 	uint8_t block_flags =
 	    ctx->flags | chunk_state_maybe_start_flag(ctx) | CHUNK_END;
 	return (make_output(ctx->cv, ctx->buf, ctx->buf_len, ctx->chunk_counter,
@@ -263,6 +277,7 @@ static size_t compress_chunks_parallel(const uint8_t *input,
     size_t input_len, const uint32_t key[8], uint64_t chunk_counter,
     uint8_t flags, uint8_t *out)
 {
+	dprintf("%s\n", __func__);
 	const blake3_impl_ops_t *ops = blake3_impl_get_ops();
 	const uint8_t *chunks_array[MAX_SIMD_DEGREE];
 	size_t input_position = 0;
@@ -308,6 +323,7 @@ static size_t compress_parents_parallel(const uint8_t *child_chaining_values,
     size_t num_chaining_values, const uint32_t key[8], uint8_t flags,
     uint8_t *out)
 {
+	dprintf("%s\n", __func__);
 	const blake3_impl_ops_t *ops = blake3_impl_get_ops();
 	const uint8_t *parents_array[MAX_SIMD_DEGREE_OR_2];
 	size_t parents_array_len = 0;
@@ -356,6 +372,7 @@ static size_t blake3_compress_subtree_wide(const uint8_t *input,
     uint8_t flags, uint8_t *out)
 {
 	const blake3_impl_ops_t *ops = blake3_impl_get_ops();
+	dprintf("%s\n", __func__);
 
 	/*
 	 * Note that the single chunk case does *not* bump the SIMD degree up
@@ -444,8 +461,10 @@ static void compress_subtree_to_parent_node(const uint8_t *input,
     uint8_t flags, uint8_t out[2 * BLAKE3_OUT_LEN])
 {
 	uint8_t cv_array[MAX_SIMD_DEGREE_OR_2 * BLAKE3_OUT_LEN];
+	dprintf("%s\n", __func__);
 	size_t num_cvs = blake3_compress_subtree_wide(input, input_len, key,
 	    chunk_counter, flags, cv_array);
+
 
 	/*
 	 * If MAX_SIMD_DEGREE is greater than 2 and there's enough input,
@@ -465,6 +484,7 @@ static void hasher_init_base(BLAKE3_CTX *ctx, const uint32_t key[8],
     uint8_t flags)
 {
 	memcpy(ctx->key, key, BLAKE3_KEY_LEN);
+	//dprintf("%s\n", __func__);
 	chunk_state_init(&ctx->chunk, key, flags);
 	ctx->cv_stack_len = 0;
 }
@@ -485,6 +505,8 @@ static void hasher_init_base(BLAKE3_CTX *ctx, const uint32_t key[8],
 static void hasher_merge_cv_stack(BLAKE3_CTX *ctx, uint64_t total_len)
 {
 	size_t post_merge_stack_len = (size_t)popcnt(total_len);
+
+	dprintf("%s\n", __func__);
 	while (ctx->cv_stack_len > post_merge_stack_len) {
 		uint8_t *parent_node =
 		    &ctx->cv_stack[(ctx->cv_stack_len - 2) * BLAKE3_OUT_LEN];
@@ -532,6 +554,7 @@ static void hasher_merge_cv_stack(BLAKE3_CTX *ctx, uint64_t total_len)
 static void hasher_push_cv(BLAKE3_CTX *ctx, uint8_t new_cv[BLAKE3_OUT_LEN],
     uint64_t chunk_counter)
 {
+	dprintf("%s\n", __func__);
 	hasher_merge_cv_stack(ctx, chunk_counter);
 	memcpy(&ctx->cv_stack[ctx->cv_stack_len * BLAKE3_OUT_LEN], new_cv,
 	    BLAKE3_OUT_LEN);
@@ -541,12 +564,14 @@ static void hasher_push_cv(BLAKE3_CTX *ctx, uint8_t new_cv[BLAKE3_OUT_LEN],
 void
 Blake3_Init(BLAKE3_CTX *ctx)
 {
+	dprintf("%s\n", __func__);
 	hasher_init_base(ctx, IV, 0);
 }
 
 void
 Blake3_InitKeyed(BLAKE3_CTX *ctx, const uint8_t key[BLAKE3_KEY_LEN])
 {
+	dprintf("%s\n", __func__);
 	uint32_t key_words[8];
 	load_key_words(key, key_words);
 	hasher_init_base(ctx, key_words, KEYED_HASH);
@@ -555,6 +580,7 @@ Blake3_InitKeyed(BLAKE3_CTX *ctx, const uint8_t key[BLAKE3_KEY_LEN])
 static void
 Blake3_Update2(BLAKE3_CTX *ctx, const void *input, size_t input_len)
 {
+	dprintf("%s\n", __func__);
 	/*
 	 * Explicitly checking for zero avoids causing UB by passing a null
 	 * pointer to memcpy. This comes up in practice with things like:
@@ -690,10 +716,12 @@ Blake3_Update2(BLAKE3_CTX *ctx, const void *input, size_t input_len)
 	}
 }
 
+#if 1
 #define	BLAKE3_MAX	1024 * 64 * 1000
 void
 Blake3_Update(BLAKE3_CTX *ctx, const void *input, size_t todo)
 {
+	dprintf("%s\n", __func__);
 	size_t done = 0;
 	const uint8_t *data = input;
 
@@ -706,10 +734,12 @@ Blake3_Update(BLAKE3_CTX *ctx, const void *input, size_t todo)
 	}
 }
 #undef BLAKE3_MAX
+#endif
 
 void
 Blake3_Final(const BLAKE3_CTX *ctx, uint8_t *out)
 {
+	dprintf("%s\n", __func__);
 	Blake3_FinalSeek(ctx, 0, out, BLAKE3_OUT_LEN);
 }
 
@@ -717,6 +747,7 @@ void
 Blake3_FinalSeek(const BLAKE3_CTX *ctx, uint64_t seek, uint8_t *out,
     size_t out_len)
 {
+	dprintf("%s\n", __func__);
 	/*
 	 * Explicitly checking for zero avoids causing UB by passing a null
 	 * pointer to memcpy. This comes up in practice with things like:

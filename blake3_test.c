@@ -594,6 +594,7 @@ main(int argc, char *argv[])
 	//printf("HAVE_AVX2:     %d\n", zfs_avx2_available());
 	//printf("HAVE_AVX512f:  %d\n", zfs_avx512f_available());
 	//printf("HAVE_AVX512VL: %d\n", zfs_avx512vl_available());
+
 	test_blake3_ref();
 
 	for (i=0; i<100; i++) {

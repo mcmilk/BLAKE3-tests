@@ -16,6 +16,9 @@ extern "C" {
 #endif
 
 #include <sys/types.h>
+#include <string.h>
+#include <errno.h>
+
 #include "blake3.h"
 
 typedef enum {

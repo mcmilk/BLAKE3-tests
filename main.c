@@ -63,6 +63,11 @@ int main(int argc, char **argv) {
   uint8_t mode = HASH_MODE;
   uint8_t *buf, *B = alloca(BUFSIZE);
 
+  //blake3_set_impl_name("generic");
+  blake3_set_impl_name("sse2");
+  //blake3_set_impl_name("sse41");
+  printf("GET current: %s\n", blake3_get_impl_name());
+
   while (argc > 1) {
     if (argc <= 2) {
       fprintf(stderr, "Odd number of arguments.\n");
