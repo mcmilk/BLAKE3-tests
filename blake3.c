@@ -14,7 +14,7 @@
 #include "blake3_impl.h"
 
 #include <stdio.h>
-#if 1
+#if 0
 #define dprintf printf
 #else
 #define dprintf(...)

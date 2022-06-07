@@ -25,7 +25,7 @@
  * Copyright (c) 2022 Tino Reichardt <milky-zfs@mcmilk.de>
  */
 
-#if defined(HAVE_SSE2)
+#if defined(__x86_64)
 
 #if !defined(_CET_ENDBR)
 #define _CET_ENDBR

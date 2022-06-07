@@ -31,16 +31,10 @@ static const blake3_impl_ops_t *const blake3_impls[] = {
 	&blake3_sse2_impl,
 	&blake3_sse41_impl,
 #endif
-#if defined(__x86_64) && defined(HAVE_SSE2)
+#if defined(__x86_64)
 	&blake3_sse2_impl,
-#endif
-#if defined(__x86_64) && defined(HAVE_SSE4_1)
 	&blake3_sse41_impl,
-#endif
-#if defined(__x86_64) && defined(HAVE_SSE4_1) && defined(HAVE_AVX2)
 	&blake3_avx2_impl,
-#endif
-#if defined(__x86_64) && defined(HAVE_AVX512F) && defined(HAVE_AVX512VL)
 	&blake3_avx512_impl,
 #endif
 };

@@ -15,35 +15,7 @@ kfpu_allowed(void) {
 	return (1);
 }
 
-#if defined(__x86_64)
-static inline boolean_t
-zfs_sse2_available(void) {
-	return (__builtin_cpu_supports("sse2"));
-}
-
-static inline boolean_t
-zfs_sse4_1_available(void) {
-	return (__builtin_cpu_supports("sse4.1"));
-}
-
-static inline boolean_t
-zfs_avx2_available(void) {
-	return (__builtin_cpu_supports("avx2"));
-}
-
-static inline boolean_t
-zfs_avx512f_available(void) {
-	return (__builtin_cpu_supports("avx512f"));
-}
-
-static inline boolean_t
-zfs_avx512vl_available(void) {
-	return (__builtin_cpu_supports("avx512vl"));
-}
-#endif
-
-#if (defined(__x86_64) && defined(HAVE_SSE2)) || \
-	defined(__powerpc__) || defined(__aarch64__)
+#if defined(__x86_64) || defined(__powerpc__) || defined(__aarch64__)
 
 extern void _blake3_compress_in_place_sse2(uint32_t cv[8],
     const uint8_t block[BLAKE3_BLOCK_LEN], uint8_t block_len,
@@ -88,8 +60,6 @@ static boolean_t blake3_is_sse2_supported(void)
 {
 #if defined(__x86_64)
 	return (kfpu_allowed() && zfs_sse2_available());
-#elif defined(__powerpc__)
-	return (kfpu_allowed() && zfs_vsx_available());
 #else
 	return (kfpu_allowed());
 #endif
@@ -105,8 +75,7 @@ const blake3_impl_ops_t blake3_sse2_impl = {
 };
 #endif
 
-#if (defined(__x86_64) && defined(HAVE_SSE4_1)) || \
-	defined(__powerpc__) || defined(__aarch64__)
+#if defined(__x86_64) || defined(__powerpc__) || defined(__aarch64__)
 
 extern void _blake3_compress_in_place_sse41(uint32_t cv[8],
     const uint8_t block[BLAKE3_BLOCK_LEN], uint8_t block_len,
@@ -151,8 +120,6 @@ static boolean_t blake3_is_sse41_supported(void)
 {
 #if defined(__x86_64)
 	return (kfpu_allowed() && zfs_sse4_1_available());
-#elif defined(__powerpc__)
-	return (kfpu_allowed() && zfs_vsx_available());
 #else
 	return (kfpu_allowed());
 #endif
@@ -168,7 +135,7 @@ const blake3_impl_ops_t blake3_sse41_impl = {
 };
 #endif
 
-#if defined(__x86_64) && defined(HAVE_SSE4_1) && defined(HAVE_AVX2)
+#if defined(__x86_64)
 extern void _blake3_hash_many_avx2(const uint8_t * const *inputs,
     size_t num_inputs, size_t blocks, const uint32_t key[8],
     uint64_t counter, boolean_t increment_counter, uint8_t flags,
@@ -200,7 +167,7 @@ const blake3_impl_ops_t blake3_avx2_impl = {
 };
 #endif
 
-#if defined(__x86_64) && defined(HAVE_AVX512F) && defined(HAVE_AVX512VL)
+#if defined(__x86_64)
 extern void _blake3_compress_in_place_avx512(uint32_t cv[8],
     const uint8_t block[BLAKE3_BLOCK_LEN], uint8_t block_len,
     uint64_t counter, uint8_t flags);

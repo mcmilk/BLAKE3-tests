@@ -7,32 +7,22 @@ PROGS	= blake3 blake3_test
 
 # SSE2 SSE41 AVX2 AVX512
 OBJS	+= blake3_x86-64.o
-
-CFLAGS	+= -DHAVE_SSE2
 OBJS	+= asm/blake3_sse2.o
-
-CFLAGS	+= -DHAVE_SSE4_1
 OBJS	+= asm/blake3_sse41.o
-
-#CFLAGS	+= -DHAVE_AVX2
-#OBJS	+= asm/blake3_avx2.o
-
-#CFLAGS	+= -DHAVE_AVX512F -DHAVE_AVX512VL
-#OBJS	+= asm/blake3_avx512.o
+OBJS	+= asm/blake3_avx2.o
+OBJS	+= asm/blake3_avx512.o
 
 # AARCH64
-#OBJS	+= asm/b3_aarch64_sse2.o
-#OBJS	+= asm/b3_aarch64_sse41.o
+OBJS	+= asm/b3_aarch64_sse2.o
+OBJS	+= asm/b3_aarch64_sse41.o
 
 # PPC64
-#OBJS	+= asm/b3_ppc64le_sse2.o
-#OBJS	+= asm/b3_ppc64le_sse41.o
-#OBJS	+= asm/b3_ppc64_sse2.o
-#OBJS	+= asm/b3_ppc64_sse41.o
+OBJS	+= asm/b3_ppc64le_sse2.o
+OBJS	+= asm/b3_ppc64le_sse41.o
 
 # SPARC
-#OBJS	+= asm/b3_sparc_sse2.o
-#OBJS	+= asm/b3_sparc64_sse2.o
+OBJS	+= asm/b3_sparc_sse2.o
+OBJS	+= asm/b3_sparc64_sse2.o
 
 all:
 	make clean
