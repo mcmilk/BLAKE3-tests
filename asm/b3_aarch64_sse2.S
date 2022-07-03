@@ -29,8 +29,7 @@
  */
 
 #if defined(__aarch64__)
-
-.text
+	.text
 	.section	.rodata.cst16,"aM",@progbits,16
 	.p2align	4
 .LCPI0_0:

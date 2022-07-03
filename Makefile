@@ -15,14 +15,20 @@ OBJS	+= asm/blake3_avx512.o
 # AARCH64
 OBJS	+= asm/b3_aarch64_sse2.o
 OBJS	+= asm/b3_aarch64_sse41.o
+OBJS	+= asm/b3_aarch64_avx2.o
+
+# ARMv7
+OBJS	+= asm/b3_armv7_sse2.o
+OBJS	+= asm/b3_armv7_sse41.o
 
 # PPC64
 OBJS	+= asm/b3_ppc64le_sse2.o
 OBJS	+= asm/b3_ppc64le_sse41.o
+OBJS	+= asm/b3_ppc64le_avx2.o
 
-# SPARC
-OBJS	+= asm/b3_sparc_sse2.o
+# SPARC64
 OBJS	+= asm/b3_sparc64_sse2.o
+OBJS	+= asm/b3_sparc64_sse41.o
 
 all:
 	make clean

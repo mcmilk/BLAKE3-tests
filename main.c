@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < out_len; i++) {
       printf("%02x", buf[i]);
     }
-    printf(" cycles=%llu\n", stop - start);
+    printf(" cycles=%llu\n", (long long unsigned)(stop - start));
   }
   printf("  -\n");
 

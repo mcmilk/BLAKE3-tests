@@ -15,7 +15,7 @@ kfpu_allowed(void) {
 	return (1);
 }
 
-#if defined(__x86_64) || defined(__powerpc__) || defined(__aarch64__)
+#if defined(__x86_64) || defined(__powerpc__) || defined(__aarch64__) || defined(__sparc__)
 
 extern void _blake3_compress_in_place_sse2(uint32_t cv[8],
     const uint8_t block[BLAKE3_BLOCK_LEN], uint8_t block_len,
@@ -75,7 +75,7 @@ const blake3_impl_ops_t blake3_sse2_impl = {
 };
 #endif
 
-#if defined(__x86_64) || defined(__powerpc__) || defined(__aarch64__)
+#if defined(__x86_64) || defined(__powerpc__) || defined(__aarch64__) || defined(__sparc__)
 
 extern void _blake3_compress_in_place_sse41(uint32_t cv[8],
     const uint8_t block[BLAKE3_BLOCK_LEN], uint8_t block_len,
@@ -153,8 +153,11 @@ static void blake3_hash_many_avx2(const uint8_t * const *inputs,
 
 static boolean_t blake3_is_avx2_supported(void)
 {
-	return (kfpu_allowed() && zfs_sse4_1_available() &&
-	    zfs_avx2_available());
+#if defined(__x86_64)
+	return (kfpu_allowed() && zfs_sse4_1_available() && zfs_avx2_available());
+#else
+	return (kfpu_allowed());
+#endif
 }
 
 const blake3_impl_ops_t blake3_avx2_impl = {

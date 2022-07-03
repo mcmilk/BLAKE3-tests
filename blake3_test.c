@@ -7,25 +7,24 @@
 
 #define _GNU_SOURCE
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <time.h>
+
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <sys/syscall.h>
-
-#if 0
-#include <sys/random.h>
-#else
-ssize_t getrandom(void *buf, size_t buflen, unsigned int flags) {
-        return syscall(359, buf, buflen, flags);
-}
-#endif
-
 #include "blake3.h"
+#include "blake3_impl.h"
 #include "get_cycles.h"
 
 /*
@@ -464,25 +463,6 @@ static size_t fmt_hexdump(char *dest, const char *src, size_t len) {
 	return (written);
 }
 
-static uint32_t
-random_range(uint32_t range)
-{
-	uint8_t buf[4];
-	uint32_t r;
-
-	if (range == 0)
-		return (0);
-
-	getrandom(buf, sizeof(buf), 0);
-	r = 0;
-	r += (buf[0] & 0xff) << 0;
-	r += (buf[1] & 0xff) << 4;
-	r += (buf[2] & 0xff) << 8;
-	r += (buf[3] & 0xff) << 16;
-
-	return (r % range);
-}
-
 void test_blake3_ref() {
 	uint8_t buffer[102400];
 	int id, i, j;
@@ -529,89 +509,242 @@ void test_blake3_ref() {
 	printf("DONE!\n");
 }
 
+const char *progname = "blake3-test";
+const char *VERSION = "0.1";
+int opt_benchmark = 0;
+int opt_functional = 0;
+int opt_verbose = 0;
+int opt_iterations = 1;
 
-#undef TEST_DIGEST_LEN
-#define TEST_DIGEST_LEN 262
-static void test_blake3_impl(int i) {
-	uint8_t buffer[1024*1024];
-	uint32_t testlen;
-	int id;
-
-	BLAKE3_CTX ctx;
-	uint8_t hash_ref[TEST_DIGEST_LEN], shash_ref[TEST_DIGEST_LEN];
-
-	testlen = random_range(1024*1024);
-	getrandom(buffer, sizeof(buffer), 0);
-
-	/* reference - default hashing */
-	Blake3_Init(&ctx);
-	Blake3_Update(&ctx, buffer, testlen);
-	Blake3_FinalSeek(&ctx, 0, hash_ref, TEST_DIGEST_LEN);
-
-	/* reference - salted hashing */
-	Blake3_InitKeyed(&ctx, (const uint8_t *)salt);
-	Blake3_Update(&ctx, buffer, testlen);
-	Blake3_FinalSeek(&ctx, 0, shash_ref, TEST_DIGEST_LEN);
-
-	printf("%d=%u ", i, testlen);
-	fflush(stdout);
-
-	/* check id 1..N (0 must be generic) */
-	for (id = 1; id < blake3_get_impl_count(); id++) {
-		uint8_t hash[TEST_DIGEST_LEN];
-		char res1[TEST_DIGEST_LEN];
-		char res2[TEST_DIGEST_LEN];
-		const char *name;
-
-		blake3_set_impl_id(id);
-		name = blake3_get_impl_name();
-
-		/* default hashing */
-		Blake3_Init(&ctx);
-		Blake3_Update(&ctx, buffer, testlen);
-		Blake3_FinalSeek(&ctx, 0, hash, TEST_DIGEST_LEN);
-		if (memcmp(hash_ref, hash, TEST_DIGEST_LEN/2) != 0) {
-			fmt_hexdump(res1, (char *)hash_ref, TEST_DIGEST_LEN/2);
-			fmt_hexdump(res2, (char *)hash, TEST_DIGEST_LEN/2);
-			res1[TEST_DIGEST_LEN/2] = 0;
-			res2[TEST_DIGEST_LEN/2] = 0;
-			printf("%8s: %s ", "genric", res1);
-			printf("!= %8s: %s\n", name, res2);
-		}
-
-		/* salted hashing */
-		Blake3_InitKeyed(&ctx, (const uint8_t *)salt);
-		Blake3_Update(&ctx, buffer, testlen);
-		Blake3_FinalSeek(&ctx, 0, hash, TEST_DIGEST_LEN);
-		if (memcmp(shash_ref, hash, TEST_DIGEST_LEN/2) != 0) {
-			fmt_hexdump(res1, (char *)shash_ref, TEST_DIGEST_LEN/2);
-			fmt_hexdump(res2, (char *)hash, TEST_DIGEST_LEN/2);
-			res1[TEST_DIGEST_LEN/2] = 0;
-			res2[TEST_DIGEST_LEN/2] = 0;
-			printf("%8s: %s ", "genric", res1);
-			printf("!= %8s: %s\n", name, res2);
-		}
-	}
+static void version(void)
+{
+	printf("%s version %s\n"
+	       "\nCopyright (c) 2022 Tino Reichardt" "\n"
+	       "\n", progname, VERSION);
+	exit(0);
 }
 
-int
-main(int argc, char *argv[])
+static void usage(void)
 {
-	int i;
-	(void)argv;
-	(void)argc;
+	printf("\n Usage: %s [OPTION]"
+	       "\n"
+	       "\n Options:"
+	       "\n  -b    Benchmarking mode."
+	       "\n  -f    Functional testing."
+	       "\n  -h    Display a help and quit."
+	       "\n  -v    Be more verbose."
+	       "\n  -V    Show version information and quit."
+	       "\n"
+	       "\n Additional Options:"
+	       "\n  -i N  Set number of iterations for testing (default: 1)."
+	       "\n"
+	       "\n Report bugs to: https://github.com/mcmilk/BLAKE3-tests/issues"
+	       "\n", progname);
 
-	//printf("HAVE_SSE2:     %d\n", zfs_sse2_available());
-	//printf("HAVE_SSE41:    %d\n", zfs_sse4_1_available());
-	//printf("HAVE_AVX2:     %d\n", zfs_avx2_available());
-	//printf("HAVE_AVX512f:  %d\n", zfs_avx512f_available());
-	//printf("HAVE_AVX512VL: %d\n", zfs_avx512vl_available());
+	exit(0);
+}
 
-	test_blake3_ref();
+#define	SEC				1
+#define	MILLISEC			1000
+#define	NANOSEC				1000000000
 
-	for (i=0; i<100; i++) {
-		test_blake3_impl(i);
+#define	MSEC2NSEC(m)	((time_t)(m) * (NANOSEC / MILLISEC))
+#define	NSEC2MSEC(n)	((n) / (NANOSEC / MILLISEC))
+
+#define MSEC_PER_SEC	1000L
+#define USEC_PER_SEC	1000000L
+#define NSEC_PER_SEC	1000000000L
+
+#if defined(__sun__)
+static uint64_t my_gethrtime(void)
+{
+	return (uint64_t)gethrtime();
+}
+#else
+static uint64_t my_gethrtime(void)
+{
+	struct timespec ts;
+#ifdef CLOCK_MONOTONIC_RAW
+	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+#else
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+	return (uint64_t) ((ts.tv_sec * NSEC_PER_SEC) + ts.tv_nsec);
+}
+#endif
+
+typedef struct {
+	uint64_t bs1k;
+	uint64_t bs4k;
+	uint64_t bs16k;
+	uint64_t bs64k;
+	uint64_t bs256k;
+	uint64_t bs1m;
+	uint64_t bs4m;
+	const blake3_impl_ops_t *impl;
+} chksum_stat_t;
+
+static void chksum_run(int round, uint64_t * result)
+{
+	uint64_t start;
+	uint64_t run_bw, run_time_ns, run_count, size = 0;
+	uint32_t l, loops = 0;
+	BLAKE3_CTX ctx;
+	void *buf;
+	unsigned char md[64 * 2 + 1];
+
+	switch (round) {
+	case 1:		/* 1k */
+		size = 1 << 10;
+		loops = 128;
+		break;
+	case 2:		/* 2k */
+		size = 1 << 12;
+		loops = 64;
+		break;
+	case 3:		/* 4k */
+		size = 1 << 14;
+		loops = 32;
+		break;
+	case 4:		/* 16k */
+		size = 1 << 16;
+		loops = 16;
+		break;
+	case 5:		/* 256k */
+		size = 1 << 18;
+		loops = 8;
+		break;
+	case 6:		/* 1m */
+		size = 1 << 20;
+		loops = 4;
+		break;
+	case 7:		/* 4m */
+		size = 1 << 22;
+		loops = 1;
+		break;
 	}
 
-	return (0);
+	buf = malloc(size);
+	if (!buf)
+		exit(111);
+
+	/* warmup */
+	start = my_gethrtime();
+	Blake3_Init(&ctx);
+
+	run_count = 0;
+	do {
+		for (l = 0; l < loops; l++, run_count++)
+			Blake3_Update(&ctx, buf, size);
+
+		run_time_ns = my_gethrtime() - start;
+	} while (run_time_ns < MSEC2NSEC(1));
+	Blake3_Final(&ctx, md);
+
+	/* benchmark */
+	start = my_gethrtime();
+	Blake3_Init(&ctx);
+	run_count = 0;
+	do {
+		for (l = 0; l < loops; l++, run_count++)
+			Blake3_Update(&ctx, buf, size);
+
+		run_time_ns = my_gethrtime() - start;
+	} while (run_time_ns < MSEC2NSEC(2));
+	Blake3_Final(&ctx, md);
+	run_time_ns = my_gethrtime() - start;
+
+	free(buf);
+	run_bw = size * run_count * NANOSEC;
+	run_bw /= run_time_ns;	/* B/s */
+	*result = run_bw / 1024 / 1024;	/* MiB/s */
+}
+
+static void chksum_benchit(chksum_stat_t * cs, const char *name)
+{
+	chksum_run(1, &cs->bs1k);
+	chksum_run(2, &cs->bs4k);
+	chksum_run(3, &cs->bs16k);
+	chksum_run(4, &cs->bs64k);
+	chksum_run(5, &cs->bs256k);
+	chksum_run(6, &cs->bs1m);
+	chksum_run(7, &cs->bs4m);
+
+	printf("%-23s", name);
+	printf("%8llu", (unsigned long long)cs->bs1k);
+	printf("%8llu", (unsigned long long)cs->bs4k);
+	printf("%8llu", (unsigned long long)cs->bs16k);
+	printf("%8llu", (unsigned long long)cs->bs64k);
+	printf("%8llu", (unsigned long long)cs->bs256k);
+	printf("%8llu", (unsigned long long)cs->bs1m);
+	printf("%8llu\n", (unsigned long long)cs->bs4m);
+}
+
+int main(int argc, char *argv[])
+{
+	int i, opt;
+
+	/* same order as in help option -h */
+	while ((opt = getopt(argc, argv, "bfvVi:h?")) != -1) {
+		switch (opt) {
+		case 'b':	/* benchmark */
+			opt_benchmark = 1;
+			break;
+
+		case 'f':	/* functional tests */
+			opt_functional = 1;
+			break;
+
+		case 'v':	/* be more verbose */
+			opt_verbose++;
+			break;
+
+		case 'V':	/* version */
+			version();
+			break;
+
+		case 'i':	/* iterations */
+			opt_iterations = atoi(optarg);
+			break;
+
+		case 'h':
+		case '?':
+		default:
+			usage();
+			/* not reached */
+		}
+	}
+
+	/* use benchmarking if no parameter was used */
+	if (!opt_functional && !opt_benchmark)
+		opt_benchmark = 1;
+
+	/* tests for correctness */
+	if (opt_functional) {
+		for (i = 0; i < blake3_get_impl_count(); i++) {
+			blake3_set_impl_id(i);
+			test_blake3_ref();
+		}
+        }
+
+	if (opt_benchmark) {
+		/* header */
+		printf("%-23s", "implementation");
+		printf("%8s", "1k");
+		printf("%8s", "4k");
+		printf("%8s", "16k");
+		printf("%8s", "64k");
+		printf("%8s", "256k");
+		printf("%8s", "1m");
+		printf("%8s\n", "4m");
+
+		for (i = 0; i < blake3_get_impl_count(); i++) {
+			chksum_stat_t cs;
+			blake3_set_impl_id(i);
+			const char *name = blake3_get_impl_name();
+			chksum_benchit(&cs, name);
+		}
+	}
+
+	return 0;
 }

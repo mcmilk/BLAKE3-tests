@@ -119,7 +119,7 @@ typedef uint64_t cycles_t;
 static inline cycles_t get_cycles(void)
 {
 	/* add missing platforms ... */
-#warning "no get_cycles() ??"
+//#warning "no get_cycles() ??"
 	return 0;
 }
 #endif
