@@ -6,12 +6,15 @@
  */
 
 #include <assert.h>
-#include <alloca.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef __linux__
+#include <alloca.h>
+#endif
 
 #include "blake3.h"
 #include "get_cycles.h"
