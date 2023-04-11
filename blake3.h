@@ -1,4 +1,3 @@
-
 /**
  * This work is released into the public domain with CC0 1.0.
  *

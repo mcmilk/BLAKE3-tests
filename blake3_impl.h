@@ -1,11 +1,10 @@
-
 /**
  * This work is released into the public domain with CC0 1.0.
  *
- * Homepage: https://github.com/BLAKE3-team/BLAKE3
- *
  * Copyright (c) 2019-2020 Samuel Neves and Jack O'Connor
- * Copyright (c) 2021-2022 Tino Reichardt
+ * Copyright (c) 2021-2023 Tino Reichardt
+ *
+ * Latest version: https://github.com/mcmilk/BLAKE3-tests
  */
 
 #ifndef BLAKE3_IMPL_H

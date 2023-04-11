@@ -1,8 +1,9 @@
-
 /**
  * This work is released into the public domain with CC0 1.0.
  *
- * Copyright (c) 2021-2022 Tino Reichardt
+ * Copyright (c) 2021-2023 Tino Reichardt
+ *
+ * Latest version: https://github.com/mcmilk/BLAKE3-tests
  */
 
 #include <assert.h>

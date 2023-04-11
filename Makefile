@@ -1,6 +1,9 @@
 
+# whatever you want - put in your compiler here
 CC	= gcc
 CC	= clang
+
+# modify to fit your needs
 CFLAGS	= -I. -W -std=c99 -O3 -Wall -pipe
 
 OBJS	= blake3.o blake3_generic.o blake3_impl.o

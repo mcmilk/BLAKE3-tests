@@ -1,25 +1,6 @@
-/*
- * CDDL HEADER START
+/**
+ * This work is released into the public domain with CC0 1.0.
  *
- * The contents of this file are subject to the terms of the
- * Common Development and Distribution License (the "License").
- * You may not use this file except in compliance with the License.
- *
- * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
- * See the License for the specific language governing permissions
- * and limitations under the License.
- *
- * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
- * If applicable, add the following below this CDDL HEADER, with the
- * fields enclosed by brackets "[]" replaced with your own identifying
- * information: Portions Copyright [yyyy] [name of copyright owner]
- *
- * CDDL HEADER END
- */
-
-/*
  * Based on BLAKE3 v1.3.1, https://github.com/BLAKE3-team/BLAKE3
  * Copyright (c) 2019-2022 Samuel Neves and Matthew Krupcale
  * Copyright (c) 2022-2023 Tino Reichardt <milky-zfs@mcmilk.de>
@@ -43,7 +24,6 @@
 	.word	0
 .Lsec_end0:
 	.text
-	.file	"blake3_sse2.c"
 	.globl	_blake3_compress_in_place_sse2
 	.p2align	2
 	.type	_blake3_compress_in_place_sse2,@function
@@ -51,11 +31,14 @@ _blake3_compress_in_place_sse2:
 	.cfi_startproc
 	hint	#25
 	.cfi_negate_ra_state
-	sub	sp, sp, #80
-	stp	x30, x19, [sp, #64]
-	.cfi_def_cfa_offset 80
-	.cfi_offset w19, -8
-	.cfi_offset w30, -16
+	sub	sp, sp, #96
+	stp	x29, x30, [sp, #64]
+	add	x29, sp, #64
+	str	x19, [sp, #80]
+	.cfi_def_cfa w29, 32
+	.cfi_offset w19, -16
+	.cfi_offset w30, -24
+	.cfi_offset w29, -32
 	mov	x19, x0
 	mov	w5, w4
 	mov	x4, x3
@@ -68,9 +51,10 @@ _blake3_compress_in_place_sse2:
 	ldp	q2, q3, [sp, #32]
 	eor	v0.16b, v2.16b, v0.16b
 	eor	v1.16b, v3.16b, v1.16b
+	ldp	x29, x30, [sp, #64]
 	stp	q0, q1, [x19]
-	ldp	x30, x19, [sp, #64]
-	add	sp, sp, #80
+	ldr	x19, [sp, #80]
+	add	sp, sp, #96
 	hint	#29
 	ret
 .Lfunc_end0:
@@ -552,12 +536,14 @@ _blake3_compress_xof_sse2:
 	hint	#25
 	.cfi_negate_ra_state
 	sub	sp, sp, #96
-	str	x30, [sp, #64]
+	stp	x29, x30, [sp, #64]
+	add	x29, sp, #64
 	stp	x20, x19, [sp, #80]
-	.cfi_def_cfa_offset 96
+	.cfi_def_cfa w29, 32
 	.cfi_offset w19, -8
 	.cfi_offset w20, -16
-	.cfi_offset w30, -32
+	.cfi_offset w30, -24
+	.cfi_offset w29, -32
 	mov	x20, x0
 	mov	x19, x5
 	mov	w5, w4
@@ -571,7 +557,7 @@ _blake3_compress_xof_sse2:
 	ldp	q2, q3, [sp, #32]
 	eor	v0.16b, v2.16b, v0.16b
 	eor	v1.16b, v3.16b, v1.16b
-	ldr	x30, [sp, #64]
+	ldp	x29, x30, [sp, #64]
 	stp	q0, q1, [x19]
 	ldr	q0, [x20]
 	eor	v0.16b, v0.16b, v2.16b
@@ -607,13 +593,14 @@ _blake3_hash_many_sse2:
 	stp	d11, d10, [sp, #32]
 	stp	d9, d8, [sp, #48]
 	stp	x29, x30, [sp, #64]
+	add	x29, sp, #64
 	stp	x28, x27, [sp, #80]
 	stp	x26, x25, [sp, #96]
 	stp	x24, x23, [sp, #112]
 	stp	x22, x21, [sp, #128]
 	stp	x20, x19, [sp, #144]
 	sub	sp, sp, #464
-	.cfi_def_cfa_offset 624
+	.cfi_def_cfa w29, 96
 	.cfi_offset w19, -8
 	.cfi_offset w20, -16
 	.cfi_offset w21, -24
@@ -636,12 +623,11 @@ _blake3_hash_many_sse2:
 	.cfi_offset b15, -160
 	mov	w19, w6
 	mov	x20, x4
-	mov	x23, x1
-	mov	x24, x0
-	ldr	x26, [sp, #632]
+	mov	x24, x1
+	ldr	x26, [x29, #104]
+	ldrb	w27, [x29, #96]
 	cmp	x1, #4
-	ldrb	w27, [sp, #624]
-	str	x3, [sp, #56]
+	str	x3, [sp, #40]
 	b.lo	.LBB3_6
 	adrp	x8, .LCPI3_0
 	sbfx	w9, w5, #0, #1
@@ -660,12 +646,12 @@ _blake3_hash_many_sse2:
 	dup	v2.4s, w9
 	mov	w9, #62778
 	movk	w9, #42319, lsl #16
-	str	q0, [sp, #32]
-	orr	v0.4s, #128, lsl #24
-	stp	q2, q1, [sp, #64]
 	str	q0, [sp, #16]
+	orr	v0.4s, #128, lsl #24
+	stp	q2, q1, [sp, #48]
+	str	q0, [sp]
 	dup	v0.4s, w10
-	str	q0, [sp, #96]
+	str	q0, [sp, #80]
 	b	.LBB3_3
 .LBB3_2:
 	zip1	v0.4s, v12.4s, v31.4s
@@ -675,11 +661,11 @@ _blake3_hash_many_sse2:
 	zip1	v2.4s, v28.4s, v23.4s
 	csel	x20, x10, x20, ne
 	zip1	v3.4s, v13.4s, v25.4s
-	add	x24, x24, #32
+	add	x0, x0, #32
 	zip2	v6.4s, v12.4s, v31.4s
-	sub	x23, x23, #4
+	sub	x24, x24, #4
 	zip1	v4.2d, v0.2d, v1.2d
-	cmp	x23, #3
+	cmp	x24, #3
 	zip2	v7.4s, v29.4s, v30.4s
 	zip1	v5.2d, v2.2d, v3.2d
 	zip2	v0.2d, v0.2d, v1.2d
@@ -697,45 +683,45 @@ _blake3_hash_many_sse2:
 	add	x26, x26, #128
 	b.ls	.LBB3_6
 .LBB3_3:
-	ldr	x15, [sp, #56]
-	mov	x10, x15
-	add	x11, x15, #8
-	add	x12, x15, #12
-	add	x13, x15, #16
-	add	x14, x15, #20
+	ldr	x14, [sp, #40]
+	mov	x10, x14
+	add	x11, x14, #8
+	add	x12, x14, #12
+	add	x13, x14, #16
 	ld1r	{ v12.4s }, [x10], #4
 	ld1r	{ v29.4s }, [x11]
-	add	x11, x15, #24
+	add	x11, x14, #20
 	ld1r	{ v30.4s }, [x12]
-	add	x12, x15, #28
+	add	x12, x14, #24
 	ld1r	{ v28.4s }, [x13]
-	ld1r	{ v23.4s }, [x14]
-	ld1r	{ v13.4s }, [x11]
+	ld1r	{ v23.4s }, [x11]
+	add	x11, x14, #28
+	ld1r	{ v13.4s }, [x12]
 	ld1r	{ v31.4s }, [x10]
-	ld1r	{ v25.4s }, [x12]
+	ld1r	{ v25.4s }, [x11]
 	cbz	x2, .LBB3_2
-	ldr	q1, [sp, #32]
+	ldr	q1, [sp, #16]
 	dup	v0.4s, w20
 	lsr	x12, x20, #32
 	mov	x10, xzr
-	ldp	x13, x14, [x24, #16]
+	ldp	x13, x14, [x0, #16]
 	add	v1.4s, v0.4s, v1.4s
 	mov	x15, x2
 	movi	v0.4s, #128, lsl #24
 	mov	w4, w8
-	str	q1, [sp, #128]
+	str	q1, [sp, #112]
 	eor	v0.16b, v1.16b, v0.16b
-	ldr	q1, [sp, #16]
+	ldr	q1, [sp]
 	cmgt	v0.4s, v1.4s, v0.4s
 	dup	v1.4s, w12
-	ldp	x11, x12, [x24]
+	ldp	x11, x12, [x0]
 	sub	v0.4s, v1.4s, v0.4s
-	str	q0, [sp, #112]
+	str	q0, [sp, #96]
 .LBB3_5:
 	add	x17, x11, x10
-	add	x0, x12, x10
+	add	x21, x12, x10
 	add	x16, x13, x10
-	add	x1, x14, x10
+	add	x6, x14, x10
 	subs	x15, x15, #1
 	add	x10, x10, #64
 	ldp	q0, q1, [x17]
@@ -743,14 +729,14 @@ _blake3_hash_many_sse2:
 	orr	w3, w3, w4
 	mov	w4, w19
 	and	w3, w3, #0xff
-	ldp	q3, q6, [x0]
+	ldp	q3, q6, [x21]
 	dup	v2.4s, w3
 	zip1	v21.4s, v0.4s, v3.4s
 	zip2	v19.4s, v0.4s, v3.4s
 	ldp	q5, q7, [x16]
 	zip1	v17.4s, v1.4s, v6.4s
 	zip2	v22.4s, v1.4s, v6.4s
-	ldp	q16, q18, [x1]
+	ldp	q16, q18, [x6]
 	zip1	v4.4s, v5.4s, v16.4s
 	zip2	v0.4s, v5.4s, v16.4s
 	ldp	q26, q27, [x17, #32]
@@ -759,15 +745,17 @@ _blake3_hash_many_sse2:
 	zip2	v20.2d, v19.2d, v0.2d
 	mov	v19.d[1], v0.d[0]
 	dup	v18.4s, w9
-	ldp	q8, q9, [x0, #32]
+	ldp	q8, q9, [x21, #32]
+	stur	q19, [x29, #-208]
 	zip2	v7.4s, v26.4s, v8.4s
 	zip1	v10.4s, v26.4s, v8.4s
 	ldp	q11, q5, [x16, #32]
 	zip2	v26.2d, v17.2d, v1.2d
-	str	q7, [sp, #208]
+	stp	q7, q26, [sp, #192]
 	mov	v17.d[1], v1.d[0]
 	add	v1.4s, v23.4s, v31.4s
-	ldp	q16, q6, [x1, #32]
+	ldp	q16, q6, [x6, #32]
+	stur	q17, [x29, #-256]
 	add	v1.4s, v1.4s, v19.4s
 	zip1	v8.4s, v11.4s, v16.4s
 	zip2	v7.4s, v11.4s, v16.4s
@@ -775,24 +763,25 @@ _blake3_hash_many_sse2:
 	zip2	v9.4s, v27.4s, v9.4s
 	zip2	v27.2d, v21.2d, v4.2d
 	mov	v21.d[1], v4.d[0]
-	stp	q26, q7, [sp, #224]
+	str	q7, [sp, #224]
 	add	v4.4s, v28.4s, v12.4s
 	zip1	v15.4s, v5.4s, v6.4s
 	zip2	v14.4s, v5.4s, v6.4s
-	stp	q19, q27, [sp, #336]
+	stur	q27, [x29, #-192]
 	zip2	v16.2d, v22.2d, v3.2d
-	stp	q20, q21, [sp, #304]
+	stp	q20, q21, [x29, #-240]
 	add	v0.4s, v4.4s, v21.4s
-	ldp	q6, q4, [sp, #112]
+	ldp	q6, q4, [sp, #96]
 	mov	v22.d[1], v3.d[0]
 	add	v5.4s, v25.4s, v30.4s
 	add	v3.4s, v13.4s, v29.4s
 	eor	v6.16b, v1.16b, v6.16b
-	stp	q22, q17, [sp, #272]
+	add	v1.4s, v1.4s, v20.4s
+	str	q22, [sp, #256]
 	eor	v4.16b, v0.16b, v4.16b
 	add	v5.4s, v5.4s, v22.4s
 	add	v3.4s, v3.4s, v17.4s
-	ldr	q17, [sp, #64]
+	ldr	q17, [sp, #48]
 	rev32	v6.8h, v6.8h
 	rev32	v4.8h, v4.8h
 	eor	v2.16b, v5.16b, v2.16b
@@ -800,19 +789,18 @@ _blake3_hash_many_sse2:
 	add	v0.4s, v0.4s, v27.4s
 	add	v21.4s, v4.4s, v17.4s
 	rev32	v31.8h, v2.8h
-	ldr	q2, [sp, #96]
+	ldr	q2, [sp, #80]
 	rev32	v7.8h, v7.8h
-	add	v1.4s, v1.4s, v20.4s
+	mov	v27.16b, v16.16b
 	eor	v17.16b, v21.16b, v28.16b
 	add	v29.4s, v6.4s, v2.4s
-	ldr	q2, [sp, #80]
+	ldr	q2, [sp, #64]
 	add	v24.4s, v31.4s, v18.4s
-	mov	v27.16b, v16.16b
+	str	q27, [sp, #176]
 	ushr	v19.4s, v17.4s, #12
 	shl	v17.4s, v17.4s, #20
 	add	v30.4s, v7.4s, v2.4s
 	eor	v18.16b, v29.16b, v23.16b
-	str	q27, [sp, #192]
 	orr	v12.16b, v17.16b, v19.16b
 	eor	v17.16b, v30.16b, v13.16b
 	eor	v19.16b, v24.16b, v25.16b
@@ -847,7 +835,7 @@ _blake3_hash_many_sse2:
 	shl	v0.4s, v5.4s, #24
 	orr	v5.16b, v4.16b, v23.16b
 	add	v4.4s, v7.4s, v21.4s
-	ldr	q21, [sp, #208]
+	ldr	q21, [sp, #192]
 	add	v3.4s, v6.4s, v29.4s
 	orr	v31.16b, v0.16b, v31.16b
 	add	v23.4s, v5.4s, v30.4s
@@ -867,7 +855,7 @@ _blake3_hash_many_sse2:
 	orr	v1.16b, v20.16b, v30.16b
 	mov	v20.16b, v10.16b
 	mov	v24.16b, v21.16b
-	ldr	q20, [sp, #240]
+	ldr	q20, [sp, #224]
 	mov	v29.d[1], v8.d[0]
 	mov	v13.16b, v9.16b
 	zip2	v30.2d, v10.2d, v8.2d
@@ -876,10 +864,10 @@ _blake3_hash_many_sse2:
 	mov	v24.d[1], v20.d[0]
 	add	v20.4s, v28.4s, v29.4s
 	mov	v13.d[1], v14.d[0]
-	str	q8, [sp, #144]
+	str	q8, [sp, #128]
 	eor	v2.16b, v16.16b, v2.16b
 	mov	v26.d[1], v15.d[0]
-	str	q24, [sp, #208]
+	str	q24, [sp, #192]
 	add	v20.4s, v20.4s, v0.4s
 	add	v19.4s, v19.4s, v13.4s
 	ushr	v12.4s, v2.4s, #7
@@ -889,7 +877,7 @@ _blake3_hash_many_sse2:
 	add	v17.4s, v17.4s, v26.4s
 	mov	v14.16b, v26.16b
 	eor	v26.16b, v20.16b, v31.16b
-	stp	q10, q30, [sp, #240]
+	stp	q10, q30, [sp, #224]
 	add	v19.4s, v19.4s, v25.4s
 	orr	v2.16b, v2.16b, v12.16b
 	add	v18.4s, v18.4s, v1.4s
@@ -948,7 +936,7 @@ _blake3_hash_many_sse2:
 	orr	v7.16b, v7.16b, v31.16b
 	add	v3.4s, v5.4s, v3.4s
 	eor	v0.16b, v23.16b, v0.16b
-	ldp	q28, q12, [sp, #288]
+	ldp	q28, q12, [x29, #-256]
 	orr	v6.16b, v6.16b, v11.16b
 	add	v16.4s, v7.4s, v16.4s
 	eor	v25.16b, v3.16b, v25.16b
@@ -961,12 +949,12 @@ _blake3_hash_many_sse2:
 	orr	v0.16b, v0.16b, v31.16b
 	add	v18.4s, v18.4s, v12.4s
 	mov	v15.16b, v29.16b
-	ldr	q29, [sp, #336]
+	ldur	q29, [x29, #-208]
 	eor	v2.16b, v4.16b, v2.16b
 	orr	v25.16b, v25.16b, v11.16b
 	ushr	v31.4s, v1.4s, #7
 	shl	v1.4s, v1.4s, #25
-	str	q15, [sp, #176]
+	str	q15, [sp, #160]
 	add	v20.4s, v20.4s, v29.4s
 	add	v18.4s, v18.4s, v0.4s
 	ushr	v11.4s, v2.4s, #7
@@ -1007,14 +995,14 @@ _blake3_hash_many_sse2:
 	add	v18.4s, v18.4s, v0.4s
 	mov	v9.16b, v30.16b
 	mov	v30.16b, v21.16b
-	ldr	q21, [sp, #320]
+	ldur	q21, [x29, #-224]
 	ushr	v11.4s, v2.4s, #12
 	shl	v2.4s, v2.4s, #20
 	orr	v1.16b, v1.16b, v31.16b
 	add	v20.4s, v20.4s, v25.4s
-	str	q30, [sp, #160]
+	str	q30, [sp, #144]
 	add	v17.4s, v17.4s, v21.4s
-	ldr	q21, [sp, #352]
+	ldur	q21, [x29, #-192]
 	eor	v6.16b, v18.16b, v6.16b
 	orr	v2.16b, v2.16b, v11.16b
 	add	v19.4s, v19.4s, v30.4s
@@ -1062,7 +1050,7 @@ _blake3_hash_many_sse2:
 	add	v19.4s, v19.4s, v25.4s
 	orr	v2.16b, v2.16b, v11.16b
 	add	v17.4s, v17.4s, v9.4s
-	ldr	q9, [sp, #224]
+	ldr	q9, [sp, #208]
 	add	v18.4s, v18.4s, v1.4s
 	rev32	v26.8h, v26.8h
 	eor	v5.16b, v19.16b, v5.16b
@@ -1200,7 +1188,7 @@ _blake3_hash_many_sse2:
 	orr	v5.16b, v5.16b, v31.16b
 	eor	v0.16b, v3.16b, v0.16b
 	mov	v22.16b, v8.16b
-	ldp	q8, q28, [sp, #256]
+	ldp	q8, q28, [sp, #240]
 	orr	v26.16b, v26.16b, v11.16b
 	eor	v25.16b, v4.16b, v25.16b
 	add	v23.4s, v5.4s, v23.4s
@@ -1226,7 +1214,7 @@ _blake3_hash_many_sse2:
 	add	v19.4s, v19.4s, v25.4s
 	orr	v2.16b, v2.16b, v11.16b
 	add	v17.4s, v17.4s, v22.4s
-	ldr	q22, [sp, #288]
+	ldur	q22, [x29, #-256]
 	add	v18.4s, v18.4s, v1.4s
 	rev32	v26.8h, v26.8h
 	eor	v5.16b, v19.16b, v5.16b
@@ -1252,11 +1240,11 @@ _blake3_hash_many_sse2:
 	mov	v13.16b, v12.16b
 	mov	v12.16b, v27.16b
 	mov	v27.16b, v9.16b
-	ldr	q9, [sp, #352]
+	ldur	q9, [x29, #-192]
 	mov	v21.16b, v15.16b
-	ldr	q15, [sp, #240]
+	ldr	q15, [sp, #224]
 	ushr	v11.4s, v1.4s, #12
-	ldr	q21, [sp, #320]
+	ldur	q21, [x29, #-224]
 	shl	v1.4s, v1.4s, #20
 	eor	v2.16b, v4.16b, v2.16b
 	orr	v25.16b, v25.16b, v31.16b
@@ -1347,7 +1335,7 @@ _blake3_hash_many_sse2:
 	orr	v1.16b, v1.16b, v31.16b
 	add	v20.4s, v20.4s, v25.4s
 	add	v17.4s, v17.4s, v13.4s
-	ldr	q13, [sp, #176]
+	ldr	q13, [sp, #160]
 	eor	v6.16b, v18.16b, v6.16b
 	orr	v2.16b, v2.16b, v11.16b
 	add	v19.4s, v19.4s, v15.4s
@@ -1388,7 +1376,7 @@ _blake3_hash_many_sse2:
 	add	v20.4s, v20.4s, v0.4s
 	add	v19.4s, v19.4s, v9.4s
 	mov	v29.16b, v14.16b
-	ldr	q14, [sp, #144]
+	ldr	q14, [sp, #128]
 	ushr	v11.4s, v2.4s, #7
 	shl	v2.4s, v2.4s, #25
 	orr	v1.16b, v1.16b, v31.16b
@@ -1426,7 +1414,7 @@ _blake3_hash_many_sse2:
 	add	v19.4s, v19.4s, v28.4s
 	add	v20.4s, v20.4s, v0.4s
 	mov	v12.16b, v27.16b
-	ldr	q27, [sp, #336]
+	ldur	q27, [x29, #-208]
 	orr	v1.16b, v1.16b, v11.16b
 	ushr	v11.4s, v2.4s, #12
 	shl	v2.4s, v2.4s, #20
@@ -1503,7 +1491,7 @@ _blake3_hash_many_sse2:
 	add	v18.4s, v18.4s, v14.4s
 	mov	v30.16b, v29.16b
 	mov	v29.16b, v15.16b
-	ldr	q15, [sp, #160]
+	ldr	q15, [sp, #144]
 	orr	v25.16b, v25.16b, v31.16b
 	eor	v2.16b, v16.16b, v2.16b
 	ushr	v31.4s, v1.4s, #12
@@ -1544,7 +1532,7 @@ _blake3_hash_many_sse2:
 	shl	v0.4s, v0.4s, #25
 	mov	v9.16b, v28.16b
 	mov	v28.16b, v10.16b
-	ldr	q10, [sp, #192]
+	ldr	q10, [sp, #176]
 	add	v16.4s, v26.4s, v16.4s
 	ushr	v31.4s, v25.4s, #7
 	shl	v25.4s, v25.4s, #25
@@ -1593,7 +1581,7 @@ _blake3_hash_many_sse2:
 	orr	v25.16b, v25.16b, v31.16b
 	add	v19.4s, v19.4s, v22.4s
 	mov	v9.16b, v22.16b
-	ldr	q22, [sp, #304]
+	ldur	q22, [x29, #-240]
 	orr	v1.16b, v1.16b, v11.16b
 	ushr	v11.4s, v2.4s, #12
 	shl	v2.4s, v2.4s, #20
@@ -1601,7 +1589,7 @@ _blake3_hash_many_sse2:
 	add	v18.4s, v18.4s, v22.4s
 	add	v19.4s, v19.4s, v25.4s
 	mov	v24.16b, v21.16b
-	ldr	q21, [sp, #352]
+	ldur	q21, [x29, #-192]
 	orr	v2.16b, v2.16b, v11.16b
 	eor	v26.16b, v20.16b, v26.16b
 	add	v17.4s, v17.4s, v21.4s
@@ -1726,7 +1714,7 @@ _blake3_hash_many_sse2:
 	add	v20.4s, v20.4s, v0.4s
 	add	v19.4s, v19.4s, v9.4s
 	mov	v8.16b, v13.16b
-	ldr	q13, [sp, #336]
+	ldur	q13, [x29, #-208]
 	orr	v2.16b, v2.16b, v11.16b
 	add	v18.4s, v18.4s, v1.4s
 	add	v17.4s, v17.4s, v13.4s
@@ -1765,9 +1753,9 @@ _blake3_hash_many_sse2:
 	mov	v12.16b, v30.16b
 	mov	v29.16b, v21.16b
 	mov	v21.16b, v24.16b
-	ldr	q24, [sp, #208]
+	ldr	q24, [sp, #192]
 	mov	v30.16b, v22.16b
-	ldr	q22, [sp, #272]
+	ldr	q22, [sp, #256]
 	orr	v2.16b, v2.16b, v11.16b
 	add	v20.4s, v20.4s, v0.4s
 	add	v18.4s, v18.4s, v24.4s
@@ -1811,7 +1799,7 @@ _blake3_hash_many_sse2:
 	shl	v2.4s, v2.4s, #25
 	add	v20.4s, v20.4s, v14.4s
 	add	v18.4s, v18.4s, v27.4s
-	ldr	q27, [sp, #240]
+	ldr	q27, [sp, #224]
 	orr	v1.16b, v1.16b, v31.16b
 	orr	v2.16b, v2.16b, v11.16b
 	add	v20.4s, v20.4s, v25.4s
@@ -1847,15 +1835,15 @@ _blake3_hash_many_sse2:
 	ushr	v31.4s, v2.4s, #12
 	shl	v2.4s, v2.4s, #20
 	add	v18.4s, v18.4s, v21.4s
-	ldr	q21, [sp, #256]
+	ldr	q21, [sp, #240]
 	add	v20.4s, v20.4s, v27.4s
 	prfm	pldl1keep, [x17, #256]
 	orr	v1.16b, v1.16b, v29.16b
-	prfm	pldl1keep, [x0, #256]
+	prfm	pldl1keep, [x21, #256]
 	orr	v2.16b, v2.16b, v31.16b
 	prfm	pldl1keep, [x16, #256]
 	add	v18.4s, v18.4s, v0.4s
-	prfm	pldl1keep, [x1, #256]
+	prfm	pldl1keep, [x6, #256]
 	add	v17.4s, v17.4s, v21.4s
 	add	v19.4s, v19.4s, v22.4s
 	add	v20.4s, v20.4s, v25.4s
@@ -1989,43 +1977,46 @@ _blake3_hash_many_sse2:
 	cbnz	x15, .LBB3_5
 	b	.LBB3_2
 .LBB3_6:
-	cbz	x23, .LBB3_14
-	orr	w28, w7, w19
-	and	x29, x5, #0x1
+	cbz	x24, .LBB3_14
+	orr	w8, w7, w19
+	and	x22, x5, #0x1
+	stur	w8, [x29, #-192]
 .LBB3_8:
-	ldr	x8, [sp, #56]
-	mov	x21, x2
-	ldr	x25, [x24]
-	mov	w5, w28
+	ldr	x8, [sp, #40]
+	mov	x28, x0
+	ldr	x25, [x0]
+	mov	x23, x2
+	ldur	w5, [x29, #-192]
 	ldp	q0, q1, [x8]
 	mov	x8, x2
 	b	.LBB3_11
 .LBB3_9:
 	orr	w5, w5, w27
 .LBB3_10:
-	add	x0, sp, #400
-	add	x1, sp, #368
+	sub	x0, x29, #144
+	sub	x1, x29, #176
 	mov	x2, x25
 	mov	w3, #64
 	mov	x4, x20
 	bl	compress_pre
-	ldp	q0, q1, [sp, #400]
+	ldp	q0, q1, [x29, #-144]
 	add	x25, x25, #64
-	mov	x8, x22
+	mov	x8, x21
 	mov	w5, w19
-	ldp	q2, q3, [sp, #432]
+	ldp	q2, q3, [x29, #-112]
 	eor	v0.16b, v2.16b, v0.16b
 	eor	v1.16b, v3.16b, v1.16b
 .LBB3_11:
-	subs	x22, x8, #1
-	stp	q0, q1, [sp, #368]
+	subs	x21, x8, #1
+	stp	q0, q1, [x29, #-176]
 	b.eq	.LBB3_9
 	cbnz	x8, .LBB3_10
-	ldp	q1, q0, [sp, #368]
-	add	x20, x20, x29
-	add	x24, x24, #8
-	subs	x23, x23, #1
-	mov	x2, x21
+	ldp	q1, q0, [x29, #-176]
+	mov	x0, x28
+	add	x20, x20, x22
+	add	x0, x28, #8
+	subs	x24, x24, #1
+	mov	x2, x23
 	stp	q1, q0, [x26], #32
 	b.ne	.LBB3_8
 .LBB3_14:

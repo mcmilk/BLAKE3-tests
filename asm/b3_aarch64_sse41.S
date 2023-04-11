@@ -1,25 +1,6 @@
-/*
- * CDDL HEADER START
+/**
+ * This work is released into the public domain with CC0 1.0.
  *
- * The contents of this file are subject to the terms of the
- * Common Development and Distribution License (the "License").
- * You may not use this file except in compliance with the License.
- *
- * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
- * See the License for the specific language governing permissions
- * and limitations under the License.
- *
- * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
- * If applicable, add the following below this CDDL HEADER, with the
- * fields enclosed by brackets "[]" replaced with your own identifying
- * information: Portions Copyright [yyyy] [name of copyright owner]
- *
- * CDDL HEADER END
- */
-
-/*
  * Based on BLAKE3 v1.3.1, https://github.com/BLAKE3-team/BLAKE3
  * Copyright (c) 2019-2022 Samuel Neves
  * Copyright (c) 2022-2023 Tino Reichardt <milky-zfs@mcmilk.de>
@@ -50,11 +31,14 @@ _blake3_compress_in_place_sse41:
 	.cfi_startproc
 	hint	#25
 	.cfi_negate_ra_state
-	sub	sp, sp, #80
-	stp	x30, x19, [sp, #64]
-	.cfi_def_cfa_offset 80
-	.cfi_offset w19, -8
-	.cfi_offset w30, -16
+	sub	sp, sp, #96
+	stp	x29, x30, [sp, #64]
+	add	x29, sp, #64
+	str	x19, [sp, #80]
+	.cfi_def_cfa w29, 32
+	.cfi_offset w19, -16
+	.cfi_offset w30, -24
+	.cfi_offset w29, -32
 	mov	x19, x0
 	mov	w5, w4
 	mov	x4, x3
@@ -67,9 +51,10 @@ _blake3_compress_in_place_sse41:
 	ldp	q2, q3, [sp, #32]
 	eor	v0.16b, v2.16b, v0.16b
 	eor	v1.16b, v3.16b, v1.16b
+	ldp	x29, x30, [sp, #64]
 	stp	q0, q1, [x19]
-	ldp	x30, x19, [sp, #64]
-	add	sp, sp, #80
+	ldr	x19, [sp, #80]
+	add	sp, sp, #96
 	hint	#29
 	ret
 .Lfunc_end0:
@@ -561,12 +546,14 @@ _blake3_compress_xof_sse41:
 	hint	#25
 	.cfi_negate_ra_state
 	sub	sp, sp, #96
-	str	x30, [sp, #64]
+	stp	x29, x30, [sp, #64]
+	add	x29, sp, #64
 	stp	x20, x19, [sp, #80]
-	.cfi_def_cfa_offset 96
+	.cfi_def_cfa w29, 32
 	.cfi_offset w19, -8
 	.cfi_offset w20, -16
-	.cfi_offset w30, -32
+	.cfi_offset w30, -24
+	.cfi_offset w29, -32
 	mov	x20, x0
 	mov	x19, x5
 	mov	w5, w4
@@ -580,7 +567,7 @@ _blake3_compress_xof_sse41:
 	ldp	q2, q3, [sp, #32]
 	eor	v0.16b, v2.16b, v0.16b
 	eor	v1.16b, v3.16b, v1.16b
-	ldr	x30, [sp, #64]
+	ldp	x29, x30, [sp, #64]
 	stp	q0, q1, [x19]
 	ldr	q0, [x20]
 	eor	v0.16b, v0.16b, v2.16b

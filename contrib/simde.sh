@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 
-# I used clang 13 on aarch64 for that
-# /TR
-
 # checkout simde repo
 test -d simde || git clone https://github.com/simd-everywhere/simde
 
 # cleanup old stuff
 rm -f *.S
 
-# bsd/macos kernel needs -ffixed-x18
-OPTS="-O3 -Wall -Wextra -std=c99 -fomit-frame-pointer -fno-verbose-asm -DSIMDE_ENABLE_NATIVE_ALIASES -fno-addrsig -ffixed-x18 -mbranch-protection=standard"
+# bsd/macos: -ffixed-x18
+# macos:     -fno-omit-frame-pointer
+OPTS="-Ofast -Wall -Wextra -std=c99 -fno-omit-frame-pointer -fno-verbose-asm -DSIMDE_ENABLE_NATIVE_ALIASES -fno-addrsig -ffixed-x18 -mbranch-protection=standard"
 
 CC="gcc13"
-CC="clang"
+CC="clang14"
 
 T="--target=aarch64-freebsd-gnu"
 #T="--target=aarch64-linux-gnu"
